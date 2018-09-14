@@ -1,10 +1,10 @@
 {% extends "back.html" %}
 {% block hello %}
     {% import "fenye.html" as macros %}
-    <div class="tpl-content-wrapper" >
+    <div class="tpl-content-wrapper"  style="margin-top: -7px;">
         <div class="tpl-content-page-title">
         </div>
-        <div class="tpl-portlet-components">
+        <div class="tpl-portlet-components" >
             <div class="portlet-title">
                 <div class="caption font-green bold">
                     <span class="am-icon-code"></span> 测试报告
@@ -16,7 +16,8 @@
                 {% if messages %}
                     <ul class='flashes'>
                         {% for message in messages %}
-                            <li style="color: red">{{ message }}</li></ul>
+                            <li style="color: red">{{ message }}</li>
+                            </ul>
                         {% endfor %}
                 {% endif %}
             {% endwith %}
@@ -33,7 +34,8 @@
             <table class="am-table am-table-striped am-table-hover table-main" >
                 <caption>
                     <strong>
-                    </strong></caption>
+                    </strong>
+                </caption>
                 <thead>
                 <tr>
                     <th>测试数量</th>
@@ -48,14 +50,26 @@
                     <th>测试用户</th>
                     <th>报告下载</th>
                     <th>日志下载</th>
-                    {%if current_user.role_id !=1 and
-          current_user.role_id !=None  %}
-                        <th>操作</th>{%endif%}
+                    {%if current_user.role_id !=1 and current_user.role_id !=None  %}
+                        <th>操作</th>
+                    {%endif%}
                 </tr>
                 </thead>
                 <tbody id="testyonglis" >
                 </tbody>
             </table>
+            <div style="text-align: center;">
+                <ul class="pagination">
+                    <li  >
+                        <a  href="{{url_for('home.test_rep') }}">首页</a>
+                    </li>
+                    {%for page in pages%}
+                        <li>
+                            <a id='{{page}}' onclick="h=window.location.href.split('/'),m=document.getElementById({{page}}),m.setAttribute('href','/'+h[3]+'/'+{{page}})" >{{page}}</a>
+                        </li>
+                    {%endfor%}
+                </ul>
+            </div>
         </div>
     </div>
     <script type="text/javascript">
@@ -80,7 +94,7 @@
                         var insertss=$('#testyonglis');
                         insertss.empty();
                         for(var i=0;i<mdata.length;i++){
-                            insertss.append("<tr ><td id='test_num' class='test_num' >"+ mdata[i]['test_num'] +"</td><td id='pass_num' class='pass_num'><label class='label-success'>"+ mdata[i]['pass_num']+"</label></td><td id='fail_num' class='fail_num'>"+ mdata[i]['fail_num']+"</td><td >"+  mdata[i]['Exception_num']+"</td><td>"+ mdata[i]['can_num']+"</td><td>" + mdata[i]['wei_num']+"</td><td class='test_date'>"+ mdata[i]['test_time']+"</td><td>"+ mdata[i]['hour_time']+"</td><td class='proce'>"+ (mdata[i]['fenshu']+"</td><td>"+ mdata[i]['Test_user_id']+"</td><td><a href='/load/"+mdata[i]["test_rep"]+"'>报告下载</a></td><td><a href='/load/"+ mdata[i]['test_log']+"'>日志下载</a></td><th><a href='deletre/"+( mdata[i]["id"])+"'><input type='button' value='删除' class='btn btn-danger'></a></th></tr>"));
+                            insertss.append("<tr ><td id='test_num' class='test_num' >"+ mdata[i]['test_num'] +"</td><td id='pass_num' class='pass_num'><label class='label-success' style='color:black'>"+ mdata[i]['pass_num']+"</label></td><td id='fail_num' class='fail_num'>"+ mdata[i]['fail_num']+"</td><td >"+  mdata[i]['Exception_num']+"</td><td>"+ mdata[i]['can_num']+"</td><td>" + mdata[i]['wei_num']+"</td><td class='test_date'>"+ mdata[i]['test_time']+"</td><td>"+ mdata[i]['hour_time']+"</td><td class='proce'>"+ (mdata[i]['fenshu']+"</td><td>"+ mdata[i]['Test_user_id']+"</td><td><a href='/load/"+mdata[i]["test_rep"]+"'>报告下载</a></td><td><a href='/load/"+ mdata[i]['test_log']+"'>日志下载</a></td><th><a onclick='deleteproject("+( mdata[i]["id"])+")'><input type='button' value='删除' class='btn btn-danger'></a></th></tr>"));
                         };
                     }
                 },error:function (res) {
@@ -207,7 +221,23 @@
             if (option && typeof option === "object") {
                 myChart.setOption(option, true);
             }
-
+        }
+        function deleteproject(id) {
+            $.ajax({
+                url:'{{url_for( 'home.test_rep') }}',
+                type:'DELETE',
+                data:id,
+                contentType: 'application/json; charset=UTF-8',
+                processData:false,
+                success:function(data){
+                    if(data['code']!=2){
+                        alert(data['data'])
+                    }else{
+                        alert(data['data']);
+                        location.reload();
+                    }
+                }
+            })
         }
     </script>
 {% endblock %}

@@ -4,13 +4,24 @@
 @file: models.py
 @time: 2017/7/13 16:43
 """
+'''数据库'''
 from  app import  db
 import datetime
 from werkzeug.security import check_password_hash,generate_password_hash
-registrations=db.Table('registrations',db.Column('task_id',db.Integer(),db.ForeignKey('tasks.id')),
-                       db.Column('interfacetests_id',db.Integer(),db.ForeignKey('interfacetests.id')))
-quanxianuser=db.Table('quanxianusers',db.Column('user_id',db.Integer(),db.ForeignKey('users.id')),
-                      db.Column('quanxians_id',db.Integer(),db.ForeignKey('quanxians.id')))
+registrations=db.Table('registrations',db.Column('task_id',db.Integer(),
+                                                 db.ForeignKey('tasks.id')),
+                       db.Column('interfacetests_id',db.Integer()
+                                 ,db.ForeignKey('interfacetests.id')))
+quanxianuser=db.Table('quanxianusers',db.Column('user_id',db.Integer(),
+                                                db.ForeignKey('users.id')),
+                      db.Column('quanxians_id',db.Integer(),
+                                db.ForeignKey('quanxians.id')))
+rely_case=db.Table('yilai',
+                   db.Column('case_id',db.Integer(),
+                             db.ForeignKey('interfacetests.id')),
+                    db.Column('cases_id', db.Integer(),
+                              db.ForeignKey('interfacetests.id')),
+                   db.Column('attred',db.String()))
 class Permisson:
     ADD = 0x01
     EDIT = 0x02
@@ -40,14 +51,14 @@ class Role(db.Model):
             role.default = roles[r][1]
             db.session.add(role)
         db.session.commit()
-class Work(db.Model):
+class Work(db.Model):#岗位表
     __tablename__='works'
     id=db.Column(db.Integer(),primary_key=True)
     name=db.Column(db.String(),unique=True)
     user= db.relationship('User', backref='works', lazy='dynamic')
     def __repr__(self):
         return  self.name
-class User(db.Model):
+class User(db.Model):#用户表
     __tablename__='users'
     id=db.Column(db.Integer(),primary_key=True,autoincrement=True)
     username=db.Column(db.String(63),unique=True)
@@ -59,10 +70,13 @@ class User(db.Model):
     phone = db.relationship('TestResult', backref='users', lazy='dynamic')
     project=db.relationship('Project',backref='users', lazy='dynamic')
     model = db.relationship('Model', backref='users', lazy='dynamic')
+    Interface = db.relationship('Interface', backref='users', lazy='dynamic')
+    intfacecase = db.relationship('InterfaceTest', backref='users', lazy='dynamic')
     email=db.relationship('EmailReport', backref='users', lazy='dynamic')
     huanjing = db.relationship('Interfacehuan', backref='users', lazy='dynamic')
     mock = db.relationship('Mockserver', backref='users', lazy='dynamic')
     task = db.relationship('Task', backref='users', lazy='dynamic')
+    paemase = db.relationship('Parameter', backref='users', lazy='dynamic')
     def __repr__(self):
         return  self.username
     def is_administrator(self):     
@@ -79,7 +93,7 @@ class User(db.Model):
         return False
     def get_id(self):
         return self.id
-class Interface(db.Model):
+class Interface(db.Model):#接口表
     __tablename__='interfaces'
     id=db.Column(db.Integer(),primary_key=True,autoincrement=True)
     model_id=db.Column(db.Integer(),db.ForeignKey('models.id'))
@@ -87,18 +101,22 @@ class Interface(db.Model):
     Interface_name=db.Column(db.String(252))
     Interface_url=db.Column(db.String(252))
     Interface_meth= db.Column(db.String(252),default='GET')
-    Interface_par=db.Column(db.String(252))
-    Interface_back=db.Column(db.String(252))
     Interface_headers = db.Column(db.String(252))
     Interface_user_id=db.Column(db.Integer(),db.ForeignKey('users.id'))
+    interfacetype = db.Column(db.String(32), default='http')
+    interfacetests = db.relationship('InterfaceTest', backref='interfaces', lazy='dynamic')
+    interfapar = db.relationship('Parameter', backref='interfaces', lazy='dynamic')
     status=db.Column(db.Boolean(),default=False)
     def __repr__(self):
         return  self.Interface_name
-class InterfaceTest(db.Model):
+class InterfaceTest(db.Model):#测试用例表
     __tablename__='interfacetests'
     id = db.Column(db.Integer(), primary_key=True, autoincrement=True)
     model_id=db.Column(db.Integer(),db.ForeignKey('models.id'))
     projects_id=db.Column(db.Integer(),db.ForeignKey('projects.id'))
+    interface_id=db.Column(db.Integer(),db.ForeignKey('interfaces.id'))
+    bian_num=db.Column(db.String(252))
+    interface_type=db.Column(db.String(16))
     Interface_name= db.Column(db.String(252))
     Interface_url = db.Column(db.String(252))
     Interface_meth = db.Column(db.String(252))
@@ -107,6 +125,11 @@ class InterfaceTest(db.Model):
     Interface_headers = db.Column(db.String(252))
     pid = db.Column(db.Integer(), db.ForeignKey('interfacetests.id'),nullable=True)
     getattr_p=db.Column(db.String(252),nullable=True)
+    rely = db.relationship('InterfaceTest', secondary=rely_case,
+                           primaryjoin=(rely_case.c.case_id == id),
+                           secondaryjoin=(rely_case.c.cases_id == id),
+                              backref=db.backref('interfacetests',
+                                                 lazy='dynamic'), lazy='dynamic')
     Interface_is_tiaoshi=db.Column(db.Boolean(),default=False)
     Interface_tiaoshi_shifou=db.Column(db.Boolean(),default=True,nullable=True)
     Interface_user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
@@ -114,11 +137,12 @@ class InterfaceTest(db.Model):
     is_database=db.Column(db.Boolean(),default=False)
     chaxunshujuku=db.Column(db.String(252),nullable=True)
     databaseziduan=db.Column(db.String(252),nullable=True)
-    testcaseresult = db.relationship('TestcaseResult', backref='interfacetests', lazy='dynamic')
+    testcaseresult = db.relationship('TestcaseResult',
+                                     backref='interfacetests', lazy='dynamic')
     status = db.Column(db.Boolean(), default=False)
     def __repr__(self):
         return  self.Interface_name
-class TestResult(db.Model):
+class TestResult(db.Model):#测试结果表
     __tablename__='tstresults'
     id=db.Column(db.Integer(),primary_key=True,autoincrement=True)
     Test_user_id=db.Column(db.Integer(),db.ForeignKey('users.id'))
@@ -141,12 +165,14 @@ class Project(db.Model):#项目
     id=db.Column(db.Integer(), primary_key=True, autoincrement=True)
     project_user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
     project_name=db.Column(db.String(252),unique=True)
+    desc=db.Column(db.String(252),nullable=True)
     TestResult = db.relationship('TestResult', backref='projects', lazy='dynamic')
     Interfacetest = db.relationship('InterfaceTest', backref='projects', lazy='dynamic')
     Interface = db.relationship('Interface', backref='projects', lazy='dynamic')
     Interfacehuan = db.relationship('Interfacehuan', backref='projects', lazy='dynamic')
     task = db.relationship('Task', backref='projects', lazy='dynamic')
     quanxian = db.relationship('Quanxian', backref='projects', lazy='dynamic')
+    model = db.relationship('Model', backref='projects', lazy='dynamic')
     status = db.Column(db.Boolean(), default=False)
     def __repr__(self):
         return  self.project_name
@@ -155,6 +181,8 @@ class Model(db.Model):#模块，有的接口是根据模块来划分的
     id=db.Column(db.Integer,primary_key=True,autoincrement=True)
     model_name = db.Column(db.String(256))
     model_user_id = db.Column(db.Integer(), db.ForeignKey('users.id'))
+    common=db.Column(db.Boolean(),default=False)
+    project=db.Column(db.Integer(),db.ForeignKey('projects.id'),nullable=True)
     Interfacetest = db.relationship('InterfaceTest', backref='models', lazy='dynamic')
     Interface = db.relationship('Interface', backref='models', lazy='dynamic')
     status = db.Column(db.Boolean(), default=False)
@@ -163,7 +191,7 @@ class Model(db.Model):#模块，有的接口是根据模块来划分的
 class EmailReport(db.Model):
     __tablename__='emailReports'
     id=db.Column(db.Integer(),primary_key=True,autoincrement=True)
-    email_re_user_id = db.Column(db.Integer(),db.ForeignKey('users.id'))#设置发送邮件配置的人
+    email_re_user_id = db.Column(db.Integer(),db.ForeignKey('users.id'))
     send_email=db.Column(db.String(64))#发送邮箱的邮件
     send_email_password=db.Column(db.String(64))#发送邮件的密码
     stmp_email=db.Column(db.String(64))#stmp服务器
@@ -186,8 +214,10 @@ class Interfacehuan(db.Model):#测试环境
     databasepassword=db.Column(db.String(32))
     project=db.Column(db.Integer(),db.ForeignKey('projects.id'))#环境对应的项目
     status = db.Column(db.Boolean(), default=False)#状态
-    testcaseresult = db.relationship('TestcaseResult', backref='ceshihuanjing', lazy='dynamic')
-    task = db.relationship('Task', backref='ceshihuanjing', lazy='dynamic')
+    testcaseresult = db.relationship('TestcaseResult', backref='ceshihuanjing',
+                                     lazy='dynamic')
+    task = db.relationship('Task', backref='ceshihuanjing',
+                           lazy='dynamic')
     def __repr__(self):
         return self.url
 class Mockserver(db.Model):#mocksever
@@ -223,23 +253,41 @@ class Task(db.Model):#定时任务的
     yunxing_status=db.Column(db.String(),default=u'创建')#任务的运行状态，默认是创建
     prject=db.Column(db.Integer(),db.ForeignKey('projects.id'))#任务所属的项目
     testevent = db.Column(db.Integer(), db.ForeignKey('ceshihuanjing.id'))
-    interface=db.relationship('InterfaceTest',secondary=registrations,backref=db.backref('tasks'), lazy='dynamic')#多对多到测试用例
+    interface=db.relationship('InterfaceTest',secondary=registrations,
+                              backref=db.backref('tasks'), lazy='dynamic')#多对多到测试用例
     def __repr__(self):
         return  self.taskname
-class Quanxian(db.Model):
+class Quanxian(db.Model):#权限表
     __tablename__='quanxians'
     id = db.Column(db.Integer, primary_key=True)
     rose=db.Column(db.Integer(),db.ForeignKey('roles.id'))
     project=db.Column(db.Integer(),db.ForeignKey('projects.id'))
-    user=db.relationship('User',secondary=quanxianuser,backref=db.backref('quanxians'),lazy='dynamic')
+    user=db.relationship('User',secondary=quanxianuser,backref=db.backref('quanxians'),
+                         lazy='dynamic')
     def __repr__(self):
         return  str(self.id)
-class TestcaseResult(db.Model):
+class TestcaseResult(db.Model):#测试用例结果
     __tablename__='testcaseresults'
     id=db.Column(db.Integer,primary_key=True)
     case_id=db.Column(db.Integer,db.ForeignKey('interfacetests.id'),nullable=True)
     result=db.Column(db.String(252))
+    spend=db.Column(db.String(252))
     date=db.Column(db.DateTime(),default=datetime.datetime.now())
+    by=db.Column(db.Boolean(),default=False)
     testevir=db.Column(db.Integer,db.ForeignKey('ceshihuanjing.id'),nullable=True)
+    def __repr__(self):
+        return  str(self.id)
+class Parameter(db.Model):#参数
+    __tablename__ ='parames'
+    id = db.Column(db.Integer, primary_key=True, autoincrement=True)
+    interface_id = db.Column(db.Integer, db.ForeignKey("interfaces.id"))#接口id
+    parameter_type = db.Column(db.String(64))#参数类型
+    parameter_name = db.Column(db.String(64))#参数名字
+    necessary = db.Column(db.Boolean(),default=False)#是否必须
+    type = db.Column(db.Integer(),default=0)#类型,返回还是传参，入参为0  出参为1
+    status=db.Column(db.Boolean(),default=False)#状态
+    default=db.Column(db.String(63))#示例
+    desc=db.Column(db.String(252))#参数描述
+    user_id=db.Column(db.Integer,db.ForeignKey('users.id'))
     def __repr__(self):
         return  str(self.id)

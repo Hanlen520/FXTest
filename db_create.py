@@ -2,6 +2,7 @@
 # @Time    : 2017/7/13 20:53
 # @Author  : lileilei
 # @File    : db_create.py
+'''创建数据库'''
 from app import  db
 from  app.models import Permisson,Role
 def create_roles():#创建角色
@@ -18,5 +19,5 @@ def create_roles():#创建角色
         db.session.add(role)
     db.session.commit()
 if __name__=='__main__':
-    # create_roles()
-    db.create_all()
+     create_roles()
+    #db.create_all()
